@@ -12,6 +12,8 @@
 #define BLANC "37"
 #define REINIT "0"
 
+#define ARRAY_SHIFT 2
+
 typedef struct 
 {
 	long type;
@@ -19,15 +21,5 @@ typedef struct
 	pid_t expediteur;
 } 
 requete_t;
-
-typedef struct 
-{
-	int nb_specialite;
-	int nb_categorie;
-	int** specialite;
-	int* nb_ustensiles;
-}
-carte;
-
 
 #endif
