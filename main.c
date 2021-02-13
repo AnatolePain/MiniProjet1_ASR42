@@ -84,7 +84,7 @@ int main(int argc,char * argv[])
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	/* ===== CREATION DES FILES  DE MESSAGE CLIENT <--> SERVEUR ======= */
-	cle = ftok("client_serveur_key",1);
+	cle = ftok("./fd/client_serveur_key",1);
 	assert(cle != -1);
 
 	file_mess_clients_serveurs = msgget(cle,0666 | IPC_CREAT);	
@@ -92,7 +92,7 @@ int main(int argc,char * argv[])
 
 
 	/* ===== CREATION DES FILES  DE MESSAGE SERVEUR <--> CUISINER ===== */
-	cle = ftok("serveur_cuisinier_key",1);
+	cle = ftok("./fd/serveur_cuisinier_key",1);
 	assert(cle != -1);
 
 	file_mess_serveurs_cuisiniers = msgget(cle,0666 | IPC_CREAT);	
@@ -100,7 +100,7 @@ int main(int argc,char * argv[])
 	
 
 	/* ===== Initialisation du segment partagé ======================== */
-	cle = ftok("share_memory",1);
+	cle = ftok("./fd/share_memory",1);
 	assert(cle!=-1);
 
 	shmid=shmget(cle, nb_categorie*nb_spec*sizeof(int) + ARRAY_SHIFT*sizeof(int), IPC_CREAT|0666);
@@ -134,7 +134,7 @@ int main(int argc,char * argv[])
 
 	/* ===== Sémaphore ===== */
 
-	cle = ftok("sem",1);
+	cle = ftok("./fd/sem",1);
 	assert(cle!=-1);
 
 	semid = semget(cle,nb_categorie,0666 | IPC_CREAT);
@@ -172,7 +172,7 @@ int main(int argc,char * argv[])
 	//SERVEURS
 	sleep(1);
 	printf("== Création des serveurs ==\n");
-	for (i=0;i<nb_serveurs;i++){
+	for (i=1;i<=nb_serveurs;i++){
 		pid_t p = fork();
 		assert( p != -1);
 

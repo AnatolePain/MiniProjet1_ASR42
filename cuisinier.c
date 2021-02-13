@@ -44,7 +44,7 @@ int main(int argc, char const *argv[])
 	couleur(REINIT);
 
 	/* ===== File de messages ===== */
-	cle = ftok("serveur_cuisinier_key",1);
+	cle = ftok("./fd/serveur_cuisinier_key",1);
 	assert(cle != -1);
 
 	file_mess = msgget(cle,0);	
@@ -54,7 +54,7 @@ int main(int argc, char const *argv[])
 
 
 	/* ===== Mémoire partagé ===== */
-	cle2 = ftok("share_memory",1);
+	cle2 = ftok("./fd/share_memory",1);
 	assert(cle2!=-1);
 	shmid=shmget(cle2, nb_categorie*nb_spec*sizeof(int) + ARRAY_SHIFT*sizeof(int), 0);
 	if(shmid == -1){
@@ -72,7 +72,7 @@ int main(int argc, char const *argv[])
 	couleur(REINIT);
 
 	/* ===== sémaphore ===== */
-	cle = ftok("sem",1);
+	cle = ftok("./fd/sem",1);
 	assert(cle!=-1);
 
 	semid = semget(cle,0,0);
@@ -84,7 +84,7 @@ int main(int argc, char const *argv[])
 		fprintf(stdout,"Le cuisinier %d attends une specialité a faire dans la file des cuisiniers (type entre 0 et %d) \n\n",pid,nb_serveurs-1);
 		couleur(REINIT);
 		//Chaque serveur à un type dans l'odres 0..1..2.. Il ne lit pas les types au dessus.
-		if ( msgrcv(file_mess,&requete,sizeof(requete)-sizeof(requete.type),-nb_serveurs,0) == -1 ){
+		if ( msgrcv(file_mess,&requete,sizeof(requete)-sizeof(requete.type),-1*(nb_serveurs+1),0) == -1 ){
 			fprintf(stderr, "erreur: %d\n", errno);
 		}
 

@@ -39,9 +39,9 @@ int main(int argc, char const *argv[])
 	fprintf(stdout,"Je suis le serveurs numéro %d | je m'occupe de la file %d \n", pid, type );
 	couleur(REINIT);
 
-	cle_client_serveur = ftok("client_serveur_key",1);
+	cle_client_serveur = ftok("./fd/client_serveur_key",1);
 	assert(cle_client_serveur != -1);
-	cle_serveur_cuisinier = ftok("serveur_cuisinier_key",1);
+	cle_serveur_cuisinier = ftok("./fd/serveur_cuisinier_key",1);
 	assert(cle_serveur_cuisinier != -1);
 
 	/* Recuperation file de message :    */
