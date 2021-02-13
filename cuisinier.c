@@ -27,6 +27,7 @@ int main(int argc, char const *argv[])
 	int type = (int)strtol(argv[1],NULL,10);
 	int nb_spec = (int)strtol(argv[2],NULL,10);
 	int nb_categorie = (int)strtol(argv[3],NULL,10);
+	int nb_serveurs = (int)strtol(argv[4],NULL,10);
 	int pid = getpid();
 	int cle2;
 	int err;
@@ -48,6 +49,8 @@ int main(int argc, char const *argv[])
 
 	file_mess = msgget(cle,0);	
 	assert(file_mess != -1);
+
+	
 
 
 	/* ===== Mémoire partagé ===== */
@@ -78,9 +81,10 @@ int main(int argc, char const *argv[])
 	while(1){
 		//récéption message 
 		couleur(JAUNE);
-		fprintf(stdout,"Le cuisinier %d attends une specialité a faire dans la file des cuisiniers\n\n",pid);
+		fprintf(stdout,"Le cuisinier %d attends une specialité a faire dans la file des cuisiniers (type entre 0 et %d) \n\n",pid,nb_serveurs-1);
 		couleur(REINIT);
-		if ( msgrcv(file_mess,&requete,sizeof(requete)-sizeof(requete.type),0,0) == -1 ){
+		//Chaque serveur à un type dans l'odres 0..1..2.. Il ne lit pas les types au dessus.
+		if ( msgrcv(file_mess,&requete,sizeof(requete)-sizeof(requete.type),-nb_serveurs,0) == -1 ){
 			fprintf(stderr, "erreur: %d\n", errno);
 		}
 
@@ -115,12 +119,22 @@ int main(int argc, char const *argv[])
 			//exit(0);
 		}
 
-		sleep(2);
-
 		couleur(VERT);
 		printf("... le cuisinier %d a fini de trvailler, il repose tout ses ustensiles. Il reste dans la cuisine les ustensiles suivant: ",pid);
 		afficher_sem(semid,nb_categorie);
 		couleur(REINIT);
+
+		requete.type += nb_serveurs;
+
+		couleur(VERT);
+		printf("Le cuisinier %d a fini de cuisiner, il notifie le serveur qui gère la file %d (type + nombres de serveurs)\n",pid,(int)requete.type);
+		couleur(REINIT);
+
+		if( msgsnd(file_mess,&requete,sizeof(requete)-sizeof(requete.type),0) == -1 ){
+			fprintf(stderr, "erreurTEST1: %d\n", errno);
+		}
+
+
 	}
 
 

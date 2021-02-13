@@ -33,7 +33,7 @@ int main(int argc, char const *argv[])
 	srand(pid);
 
 	/* creation de la requete :          */
-	requete.type = (rand()%nb_serveurs) + 1;  //choisie aléatiorement un des serveurs
+	requete.type = (rand()%nb_serveurs);  //choisie aléatiorement un des serveurs
 	requete.expediteur = pid;
 	requete.num_specialite = rand()%nb_spec;
 
@@ -55,6 +55,7 @@ int main(int argc, char const *argv[])
 	if( msgsnd(file_mess,&requete,sizeof(requete)-sizeof(requete.type),0) == -1 ){
 		fprintf(stderr, "erreur: %d\n", errno);
 	}
+	
 	couleur(ROUGE);
 	fprintf(stdout, " Le client %d vient d'envoyer la spécialité %d à la file de type %d \n", pid, requete.num_specialite, (int)requete.type );
 	couleur(REINIT);

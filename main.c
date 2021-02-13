@@ -14,7 +14,7 @@
 #include "types.h"
 #include "helpers.h"
 
-#define NB_CLIENT 5
+#define NB_CLIENT 2
 #define NB_ARG_FIXE 5
 
 int file_mess_clients_serveurs; //faire un singleton pour que ce soit plus propre ? 
@@ -47,7 +47,7 @@ int main(int argc,char * argv[])
 {
 	int i, j, err,
 		nb_serveurs, nb_cuisiniers, nb_term, nb_spec;
-	char buf[256], buf2[256], buf3[256];
+	char buf[256], buf2[256], buf3[256], buf4[256];
 	key_t cle; /* cle de la file     */
 	ushort* nb_ustensiles;
 	int** specialite;
@@ -97,7 +97,7 @@ int main(int argc,char * argv[])
 
 	file_mess_serveurs_cuisiniers = msgget(cle,0666 | IPC_CREAT);	
 	assert(file_mess_serveurs_cuisiniers != -1);
-
+	
 
 	/* ===== Initialisation du segment partagé ======================== */
 	cle = ftok("share_memory",1);
@@ -153,7 +153,7 @@ int main(int argc,char * argv[])
 	//CUISINIERS
 	sleep(1);
 	printf("\n== Création des cuisinier == \n");
-	for (i=1;i<=nb_cuisiniers;i++){
+	for (i=0;i<nb_cuisiniers;i++){
 		pid_t p = fork();
 		assert( p != -1);
 
@@ -161,7 +161,8 @@ int main(int argc,char * argv[])
 			snprintf(buf,sizeof(buf),"%d",i);
 			snprintf(buf2,sizeof(buf2),"%d",nb_spec);
 			snprintf(buf3,sizeof(buf3),"%d",nb_categorie);
-			execl("./cuisinier","./cuisinier",buf,buf2,buf3,NULL);
+			snprintf(buf4,sizeof(buf4),"%d",nb_serveurs);
+			execl("./cuisinier","./cuisinier",buf,buf2,buf3,buf4,NULL);
 			assert(0);
 		}
 	}
@@ -171,13 +172,14 @@ int main(int argc,char * argv[])
 	//SERVEURS
 	sleep(1);
 	printf("== Création des serveurs ==\n");
-	for (i=1;i<=NB_CLIENT;i++){
+	for (i=0;i<nb_serveurs;i++){
 		pid_t p = fork();
 		assert( p != -1);
 
 		if (p==0) {
 			snprintf(buf,sizeof(buf),"%d",i);
-			execl("./serveur","./serveur",buf,NULL);
+			snprintf(buf2,sizeof(buf2),"%d",nb_serveurs);
+			execl("./serveur","./serveur",buf,buf2,NULL);
 			assert(0);
 		}
 	}
@@ -185,21 +187,24 @@ int main(int argc,char * argv[])
 	couleur(REINIT);
 
 	//CLIENT
-	printf("== Création des client == \n");
-	for (i=1;i<=nb_serveurs;i++){
-		sleep(1);
-		pid_t p = fork();
-		assert( p != -1);
+	while(1){
+		couleur(REINIT);
+		printf("== SALVE CLIENT== \n");
+		for (i=0;i<NB_CLIENT;i++){
+			sleep(1);
+			pid_t p = fork();
+			assert( p != -1);
 
-		if (p==0) {
-			snprintf(buf,sizeof(buf),"%d",i);
-			snprintf(buf2,sizeof(buf2),"%d",nb_serveurs);
-			snprintf(buf3,sizeof(buf3),"%d",nb_spec);
-			execl("./client","./client",buf,buf2,buf3,NULL);
-			assert(0);
+			if (p==0) {
+				snprintf(buf,sizeof(buf),"%d",i);
+				snprintf(buf2,sizeof(buf2),"%d",nb_serveurs);
+				snprintf(buf3,sizeof(buf3),"%d",nb_spec);
+				execl("./client","./client",buf,buf2,buf3,NULL);
+				assert(0);
+			}
 		}
+		sleep(3);
 	}
-	couleur(REINIT);
 
 	// free(nb_ustensiles);
 
