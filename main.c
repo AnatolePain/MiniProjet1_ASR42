@@ -17,10 +17,6 @@
 #define NB_CLIENT 5
 #define NB_ARG_FIXE 5
 
-//git submodule update --remote --merge
-//handler de fonction 
-//bon objet ipc
-
 int file_mess_clients_serveurs; //faire un singleton pour que ce soit plus propre ? 
 int file_mess_serveurs_cuisiniers;
 //int* nb_ustensiles;
@@ -36,13 +32,21 @@ void sig_handler(int signo){
 
 int main(int argc,char * argv[])
 {
-	int i, j,
+	int i, j, err,
 		nb_serveurs, nb_cuisiniers, nb_term, nb_spec,
-		shmid;
+		shmid, semid;
 	char buf[256], buf2[256], buf3[256];
 	key_t cle; /* cle de la file     */
 	int* nb_ustensiles;
 	int** specialite;
+
+	ushort semvals[25];//test
+
+	union semun  {
+		int val;
+		struct semid_ds *buf;
+		ushort *array;
+	} arg;
 
 	int* carte;
 	int nb_categorie = argc - NB_ARG_FIXE;
@@ -111,7 +115,40 @@ int main(int argc,char * argv[])
 
 
 	/* ===== Sémaphore ===== */
-	
+
+	cle = ftok("sem",1);
+	assert(cle!=-1);
+
+	semid = semget(cle,nb_categorie,0666 | IPC_CREAT);
+	assert(semid!=1);
+
+	for(i = 0 ; i < nb_categorie ; i++){
+		arg.val = nb_ustensiles[i];
+		err = semctl(semid,i,SETVAL,arg);
+		if(err == -1){
+			fprintf(stderr, "erreur semctl (SETVAL): %d\n", errno);
+			//exit(0);
+		}
+	}
+
+	//assert(semctl(semid,0,GETALL,arg)!=-1);
+	arg.array = semvals;
+	semctl(semid,0,GETALL,arg);
+	if(err == -1){
+		fprintf(stderr, "erreur semctl (GETALL): %d\n", errno);
+		//exit(0);
+	}
+
+	printf("sem : ");
+	for(i = 0 ; i < nb_categorie ; i++){
+		printf("%d, ",semvals[i]);
+	}
+	printf("\n");
+
+
+
+
+
 
 
 	/* ========= Création des processus ========== */
@@ -167,7 +204,12 @@ int main(int argc,char * argv[])
 	couleur(REINIT);
 	printf("== Création des serveurs términé == \n");
 
-	assert(shmctl(shmid,IPC_RMID,0) >=0);
+	err = semctl(semid,0,IPC_RMID);
+	if( err == -1){
+		fprintf(stderr, "erreur: %d\n", errno);
+	}
+	//assert(semctl(semid,0,IPC_RMID) >=0);
+
 	free(nb_ustensiles);
 
 	for (i=1;i<=(NB_CLIENT+nb_cuisiniers+nb_serveurs);i++) wait(NULL);
