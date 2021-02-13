@@ -29,7 +29,8 @@ int main(int argc, char const *argv[])
 	int nb_categorie = (int)strtol(argv[3],NULL,10);
 	int pid = getpid();
 	int cle2;
-	int i, j, shmid;
+	int err;
+	int i, j, shmid, semid;
 	int* carte;
 	key_t cle; /* cle de la file     */
 	int file_mess;		/* ID de la file    */
@@ -67,16 +68,59 @@ int main(int argc, char const *argv[])
 	afficher_carte(carte);
 	couleur(REINIT);
 
+	/* ===== sémaphore ===== */
+	cle = ftok("sem",1);
+	assert(cle!=-1);
+
+	semid = semget(cle,0,0);
+	assert(semid!=1);
+
 	while(1){
 		//récéption message 
+		couleur(JAUNE);
+		fprintf(stdout,"Le cuisinier %d attends une specialité a faire dans la file des cuisiniers\n\n",pid);
+		couleur(REINIT);
 		if ( msgrcv(file_mess,&requete,sizeof(requete)-sizeof(requete.type),0,0) == -1 ){
 			fprintf(stderr, "erreur: %d\n", errno);
 		}
 
+		struct semop_values semop_values;
+		get_semop_values(carte,&semop_values,requete.num_specialite);
+
 		couleur(JAUNE);
-		fprintf(stdout, " Le cuisiniers %d reçoit l'ordre de faire la spécialité %d\n", pid, requete.num_specialite );
+		printf("Le cuisinier %d veut prendre les ustensiles ",pid);
+		for(i = 0 ; i < semop_values.nsops ; i++){
+			printf("%d(%d), ", semop_values.sops[i].sem_op, semop_values.sops[i].sem_num);	
+		}
+		printf("pour faire la specialité %d\n",requete.num_specialite);
+		couleur(REINIT);
+		
+		err = semop(semid,semop_values.sops,semop_values.nsops);
+		if(err == -1){
+			fprintf(stderr, "erreur: %d\n", errno);
+			//exit(0);
+		}
+
+		couleur(JAUNE);
+		printf("Le cuisinier %d a pue prendre tout les ustensiles qu'il voulait, donc il reste dans la cuisine les ustensiles suivant:  ",pid);
+		afficher_sem(semid,nb_categorie);
+		printf("(%d) Il se met au travaille...\n\n",pid);
 		couleur(REINIT);
 
+		rendre_ustensiles_values(&semop_values);
+
+		err = semop(semid,semop_values.sops,semop_values.nsops);
+		if(err == -1){
+			fprintf(stderr, "erreur: %d\n", errno);
+			//exit(0);
+		}
+
+		sleep(2);
+
+		couleur(VERT);
+		printf("... le cuisinier %d a fini de trvailler, il repose tout ses ustensiles. Il reste dans la cuisine les ustensiles suivant: ",pid);
+		afficher_sem(semid,nb_categorie);
+		couleur(REINIT);
 	}
 
 

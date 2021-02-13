@@ -15,7 +15,7 @@
 #include "helpers.h"
 
 void sig_handler(int signo){
-	couleur(VERT);
+	couleur(CYAN);
 	fprintf(stdout,"fermeture des serveurs\n");
 	couleur(REINIT);
 	exit(0);
@@ -33,8 +33,8 @@ int main(int argc, char const *argv[])
 	int file_mess_serveur_cuisinier;		/* ID de la file    */
 	requete_t requete;
 
-	couleur(VERT);
-	fprintf(stdout,"Je suis le serveurs numéro %d | pid : %d \n", type, pid );
+	couleur(CYAN);
+	fprintf(stdout,"Je suis le serveurs numéro %d | je m'occupe de la file %d \n", pid, type );
 	couleur(REINIT);
 
 	cle_client_serveur = ftok("client_serveur_key",1);
@@ -54,19 +54,22 @@ int main(int argc, char const *argv[])
 
 	while(1){
 		/*récéption message */
+		couleur(CYAN);
+		fprintf(stdout,"Le serveurs numéro %d attend des clients dans la file de type %d \n\n", pid, type );
+		couleur(REINIT);
 		if ( msgrcv(file_mess_client_serveur,&requete,sizeof(requete)-sizeof(requete.type),type,0) == -1 ){
 			fprintf(stderr, "erreur: %d\n", errno);
 		}
-		couleur(VERT);
-		fprintf(stdout, " Le serveur %d reçoit le numéro de spécialité  %d provonant du client %d\n",pid,requete.num_specialite, requete.expediteur);
+		couleur(CYAN);
+		fprintf(stdout, " Le serveur %d reçoit le numéro de spécialité %d provonant du client %d\n",pid,requete.num_specialite, requete.expediteur);
 		couleur(REINIT);
 
 		/*envoir dans la file des cuisiniers*/
 		if( msgsnd(file_mess_serveur_cuisinier,&requete,sizeof(requete)-sizeof(requete.type),0) == -1 ){
 			fprintf(stderr, "erreur: %d\n", errno);
 		}
-		couleur(VERT);
-		fprintf(stdout, " Le serveur %d vient d'envoyer la spécialité %d du client %d à la file de type %d \n", pid, requete.num_specialite, requete.expediteur,(int)requete.type );
+		couleur(CYAN);
+		fprintf(stdout, " Le serveur %d vient d'envoyer la spécialité %d du client %d à la file d'attente des cuisiners\n",pid, requete.num_specialite, requete.expediteur );
 		couleur(REINIT);
 
 		sleep(2);

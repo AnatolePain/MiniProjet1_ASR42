@@ -19,6 +19,7 @@ int main(int argc, char const *argv[])
 {
 	int type = (int)strtol(argv[1],NULL,10);
 	int nb_serveurs = (int)strtol(argv[2],NULL,10); 
+	int nb_spec = (int)strtol(argv[3],NULL,10); 
 	int pid = getpid();
 	key_t cle; /* cle de la file     */
 	int file_mess;		/* ID de la file    */
@@ -26,7 +27,7 @@ int main(int argc, char const *argv[])
 	int nb_message_file;
 
 	couleur(ROUGE);
-	fprintf(stdout, "Je suis le client numéro %d | pid : %d \n", type, pid );
+	fprintf(stdout, "Je suis le client numéro %d \n", pid );
 	couleur(REINIT);
 
 	srand(pid);
@@ -34,7 +35,7 @@ int main(int argc, char const *argv[])
 	/* creation de la requete :          */
 	requete.type = (rand()%nb_serveurs) + 1;  //choisie aléatiorement un des serveurs
 	requete.expediteur = pid;
-	requete.num_specialite = rand()%10;
+	requete.num_specialite = rand()%nb_spec;
 
 	cle = ftok("client_serveur_key",1);
 	assert(cle != -1);
@@ -48,6 +49,9 @@ int main(int argc, char const *argv[])
 	nb_message_file = (int)(buf.msg_qnum);
 
 	/* envoi de la requete :             */
+	couleur(ROUGE);
+	fprintf(stdout, " Le client %d à choisie la file %d, il attends un serveur \n", pid, (int)requete.type );
+	couleur(REINIT);
 	if( msgsnd(file_mess,&requete,sizeof(requete)-sizeof(requete.type),0) == -1 ){
 		fprintf(stderr, "erreur: %d\n", errno);
 	}

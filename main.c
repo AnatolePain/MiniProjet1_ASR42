@@ -19,11 +19,24 @@
 
 int file_mess_clients_serveurs; //faire un singleton pour que ce soit plus propre ? 
 int file_mess_serveurs_cuisiniers;
+int shmid, semid;
 //int* nb_ustensiles;
+
+// int getfile_memessage(){
+// 	static int file_mess = -1;
+// 	if(file_mess == -1){
+// 		file_mess = msgget(cle,0666 | IPC_CREAT);	
+// 		assert(file_mess != -1);
+// 	}else{
+// 		return file_mess;
+// 	}
+// }
 
 void sig_handler(int signo){
 	msgctl(file_mess_serveurs_cuisiniers,IPC_RMID,NULL);
 	msgctl(file_mess_clients_serveurs,IPC_RMID,NULL);
+	assert(shmctl(shmid,IPC_RMID,0) >=0);
+	assert(semctl(semid,0,IPC_RMID) >=0);
 	//free(nb_ustensiles);
 	printf("fermeture du fast-food\n");
 	exit(0);
@@ -33,14 +46,13 @@ void sig_handler(int signo){
 int main(int argc,char * argv[])
 {
 	int i, j, err,
-		nb_serveurs, nb_cuisiniers, nb_term, nb_spec,
-		shmid, semid;
+		nb_serveurs, nb_cuisiniers, nb_term, nb_spec;
 	char buf[256], buf2[256], buf3[256];
 	key_t cle; /* cle de la file     */
-	int* nb_ustensiles;
+	ushort* nb_ustensiles;
 	int** specialite;
 
-	ushort semvals[25];//test
+	ushort semvals[25];//test (à enlever)
 
 	union semun  {
 		int val;
@@ -61,15 +73,15 @@ int main(int argc,char * argv[])
 	nb_term = (int)strtol(argv[3],NULL,10);
 	nb_spec = (int)strtol(argv[4],NULL,10);
 
-	nb_ustensiles = (int*)malloc(nb_categorie*sizeof(int));
+	nb_ustensiles = (ushort*)malloc(nb_categorie*sizeof(ushort));
 	for(int i = 0 ; i < nb_categorie; i++){
-		nb_ustensiles[i] = (int)strtol(argv[i+NB_ARG_FIXE],NULL,10);
+		nb_ustensiles[i] = (ushort)strtol(argv[i+NB_ARG_FIXE],NULL,10);
 	}
 
 	assert(set_signal_handler(SIGINT,sig_handler)==0);
 
-	//setvbuf(stdin, NULL, _IONBF, 0);
-	//setvbuf(stdout, NULL, _IONBF, 0);
+	setvbuf(stdin, NULL, _IONBF, 0);
+	setvbuf(stdout, NULL, _IONBF, 0);
 
 	/* ===== CREATION DES FILES  DE MESSAGE CLIENT <--> SERVEUR ======= */
 	cle = ftok("client_serveur_key",1);
@@ -104,14 +116,20 @@ int main(int argc,char * argv[])
 	carte[0] = nb_spec;
 	carte[1] = nb_categorie;
 
+	int rand1, rand2;
+
 	for(i = 0 ; i < nb_spec ; i++){
         for(j = 0 ; j < nb_categorie ; j++){
-            carte[ ( (sizeof(int)*nb_categorie*i) + ARRAY_SHIFT ) + j]  = rand()%(nb_ustensiles[j]+1);            
+			rand1 = rand()%(nb_ustensiles[j]+1);
+			//rand2 = (int) (rand1/2);
+            carte[ ( (sizeof(int)*nb_categorie*i) + ARRAY_SHIFT ) + j]  = rand1 ;            
         }
     }
 
-	printf("\ncarte : \n");
+	printf("Carte : \n");
 	afficher_carte(carte);
+	printf("\n");
+
 
 
 	/* ===== Sémaphore ===== */
@@ -122,55 +140,19 @@ int main(int argc,char * argv[])
 	semid = semget(cle,nb_categorie,0666 | IPC_CREAT);
 	assert(semid!=1);
 
-	for(i = 0 ; i < nb_categorie ; i++){
-		arg.val = nb_ustensiles[i];
-		err = semctl(semid,i,SETVAL,arg);
-		if(err == -1){
-			fprintf(stderr, "erreur semctl (SETVAL): %d\n", errno);
-			//exit(0);
-		}
-	}
+	//remplir
+	arg.array = nb_ustensiles;
+	semctl(semid, 0, SETALL, arg);
 
-	//assert(semctl(semid,0,GETALL,arg)!=-1);
-	arg.array = semvals;
-	semctl(semid,0,GETALL,arg);
-	if(err == -1){
-		fprintf(stderr, "erreur semctl (GETALL): %d\n", errno);
-		//exit(0);
-	}
-
-	printf("sem : ");
-	for(i = 0 ; i < nb_categorie ; i++){
-		printf("%d, ",semvals[i]);
-	}
-	printf("\n");
-
-
-
-
-
+	//afficher(à enlever)
+	afficher_sem(semid, nb_categorie);
 
 
 	/* ========= Création des processus ========== */
-	//CLIENT
-	printf("== Création des client == \n");
-	for (i=1;i<=nb_serveurs;i++){
-		pid_t p = fork();
-		assert( p != -1);
-
-		if (p==0) {
-			snprintf(buf,sizeof(buf),"%d",i);
-			snprintf(buf2,sizeof(buf2),"%d",nb_serveurs);
-			execl("./client","./client",buf,buf2,NULL);
-			assert(0);
-		}
-	}
-	sleep(2);
-	printf("== Création client términé == \n");
 
 	//CUISINIERS
-	sleep(3);
-	printf("== Création des cuisinier == \n");
+	sleep(1);
+	printf("\n== Création des cuisinier == \n");
 	for (i=1;i<=nb_cuisiniers;i++){
 		pid_t p = fork();
 		assert( p != -1);
@@ -183,12 +165,11 @@ int main(int argc,char * argv[])
 			assert(0);
 		}
 	}
-	sleep(2);
+	sleep(1);
 	couleur(REINIT);
-	printf("== Création des cuisinier términé == \n");
 
 	//SERVEURS
-	sleep(3);
+	sleep(1);
 	printf("== Création des serveurs ==\n");
 	for (i=1;i<=NB_CLIENT;i++){
 		pid_t p = fork();
@@ -200,17 +181,27 @@ int main(int argc,char * argv[])
 			assert(0);
 		}
 	}
-	sleep(2);
+	sleep(1);
 	couleur(REINIT);
-	printf("== Création des serveurs términé == \n");
 
-	err = semctl(semid,0,IPC_RMID);
-	if( err == -1){
-		fprintf(stderr, "erreur: %d\n", errno);
+	//CLIENT
+	printf("== Création des client == \n");
+	for (i=1;i<=nb_serveurs;i++){
+		sleep(1);
+		pid_t p = fork();
+		assert( p != -1);
+
+		if (p==0) {
+			snprintf(buf,sizeof(buf),"%d",i);
+			snprintf(buf2,sizeof(buf2),"%d",nb_serveurs);
+			snprintf(buf3,sizeof(buf3),"%d",nb_spec);
+			execl("./client","./client",buf,buf2,buf3,NULL);
+			assert(0);
+		}
 	}
-	//assert(semctl(semid,0,IPC_RMID) >=0);
+	couleur(REINIT);
 
-	free(nb_ustensiles);
+	// free(nb_ustensiles);
 
 	for (i=1;i<=(NB_CLIENT+nb_cuisiniers+nb_serveurs);i++) wait(NULL);
 	
